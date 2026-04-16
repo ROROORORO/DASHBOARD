@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">const PWD_HASH = '4fc82b26aecb47d2868c4efbe3581732a3e7cbcc6c2efb32062c08170a05eeb8';
   <title>Dashboard · Rob</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,600&family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -688,7 +688,7 @@
 // 1. Va sur https://emn178.github.io/online-tools/sha256.html
 // 2. Entre ton nouveau mdp → copie le hash → remplace la valeur ci-dessous
 // Mot de passe par défaut : Dashboard2026!
-const PWD_HASH = '420102d71e0e011cd6318b7de2477c4a3adc9d44ac3b84f4bb61b26ce5374ea1';
+const PWD_HASH = '4fc82b26aecb47d2868c4efbe3581732a3e7cbcc6c2efb32062c08170a05eeb8';
 
 async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
