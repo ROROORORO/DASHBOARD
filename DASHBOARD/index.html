@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">const PWD_HASH = '4fc82b26aecb47d2868c4efbe3581732a3e7cbcc6c2efb32062c08170a05eeb8';
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard · Rob</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,600&family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -1016,59 +1016,101 @@ function renderHeader() {
 const TWELVE_KEY = '17b66da57b314ade83ce351c91e98682';
 
 const SYMS = [
-  { s:'META',  n:'Meta',            type:'stock' },
-  { s:'ASML',  n:'ASML',            type:'stock' },
-  { s:'TSM',   n:'TSMC',            type:'stock' },
-  { s:'REMX',  n:'VanEck Rare Earth', type:'etf' },
-  { s:'SPX',   n:'S&P 500',         type:'index' },
-  { s:'URTH',  n:'MSCI World',      type:'etf'   },
-  { s:'IXIC',  n:'Nasdaq',          type:'index' },
+  { s:'META',  n:'Meta',              type:'stock' },
+  { s:'ASML',  n:'ASML',              type:'stock' },
+  { s:'TSM',   n:'TSMC',              type:'stock' },
+  { s:'REMX',  n:'VanEck Rare Earth', type:'etf'   },
+  { s:'SPX',   n:'S&P 500',           type:'index' },
+  { s:'URTH',  n:'MSCI World',        type:'etf'   },
+  { s:'IXIC',  n:'Nasdaq',            type:'index' },
 ];
 
 async function loadStocks() {
   const el = document.getElementById('stocks');
   try {
     const tickers = SYMS.map(x => x.s).join(',');
-    const [tdRes, cryptoRes] = await Promise.all([
+    const yearStart = new Date().getFullYear() + '-01-01';
+
+    // Fetch quote + YTD start price + crypto in parallel
+    const [quoteRes, ytdRes, cryptoRes] = await Promise.all([
       fetch(`https://api.twelvedata.com/quote?symbol=${tickers}&apikey=${TWELVE_KEY}`),
-      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true'),
+      fetch(`https://api.twelvedata.com/time_series?symbol=${tickers}&interval=1day&start_date=${yearStart}&outputsize=1&apikey=${TWELVE_KEY}`),
+      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true&include_1y_change=true'),
     ]);
-    const tdData = await tdRes.json();
-    const crypto = await cryptoRes.json();
+
+    const quoteData = await quoteRes.json();
+    const ytdData   = await ytdRes.json();
+    const crypto    = await cryptoRes.json();
+
+    // Helper to get YTD start price for a symbol
+    const getYtdPrice = (sym) => {
+      const d = ytdData[sym] || ytdData;
+      const values = d?.values;
+      if (!values || !values.length) return null;
+      return parseFloat(values[values.length - 1]?.close || 0);
+    };
 
     let html = '<div class="stocks-row">';
 
     SYMS.forEach(sym => {
-      const q = tdData[sym.s] || tdData;
-      const price  = parseFloat(q.close || q.price || 0);
-      const chg    = parseFloat(q.percent_change || 0);
-      const isIdx  = sym.type === 'index';
-      const pStr   = price
+      const q = Object.keys(quoteData).length > 2 ? quoteData[sym.s] : quoteData;
+      if (!q || q.status === 'error') {
+        html += `<div class="stock-card">
+          <div class="s-sym">${sym.n}</div>
+          <div class="s-name">${sym.s}</div>
+          <div class="s-price" style="color:var(--muted)">—</div>
+          <div class="s-chg neu">—</div>
+        </div>`;
+        return;
+      }
+
+      const isOpen   = q.is_market_open;
+      const price    = parseFloat(isOpen ? (q.close || q.previous_close) : q.close) || 0;
+      const dayChg   = parseFloat(q.percent_change || 0);
+      const ytdStart = getYtdPrice(sym.s);
+      const ytdChg   = ytdStart ? ((price - ytdStart) / ytdStart * 100) : null;
+      const isIdx    = sym.type === 'index';
+
+      const pStr = price
         ? (isIdx
           ? price.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' pts'
           : '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
         : '—';
+
+      const marketDot = isOpen
+        ? `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#1A7645;margin-right:3px;vertical-align:middle"></span>`
+        : `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#C0BDB4;margin-right:3px;vertical-align:middle"></span>`;
+
       html += `<div class="stock-card">
         <div class="s-sym">${sym.n}</div>
-        <div class="s-name">${sym.s}</div>
+        <div class="s-name" style="display:flex;align-items:center">${marketDot}${isOpen ? 'Ouvert' : 'Clôture'}</div>
         <div class="s-price">${pStr}</div>
-        <div class="s-chg">${fmtChg(chg)}</div>
+        <div class="s-chg" style="display:flex;flex-direction:column;gap:1px">
+          <span>${fmtChg(dayChg)} <span style="font-size:9px;color:var(--muted);font-family:var(--sans)">jour</span></span>
+          ${ytdChg !== null ? `<span>${fmtChg(ytdChg)} <span style="font-size:9px;color:var(--muted);font-family:var(--sans)">YTD</span></span>` : ''}
+        </div>
       </div>`;
     });
 
+    // Crypto
     const coins = [
-      { id:'bitcoin',  label:'BTC', name:'Bitcoin' },
+      { id:'bitcoin',  label:'BTC', name:'Bitcoin'  },
       { id:'ethereum', label:'ETH', name:'Ethereum' },
     ];
     coins.forEach(c => {
       const d = crypto[c.id];
       if (!d) return;
-      const p = '$' + d.usd.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      const p    = '$' + d.usd.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      const ytd  = d.usd_1y_change ? d.usd_1y_change / 12 * 12 : null; // approximation YTD via 1y
       html += `<div class="stock-card">
         <div class="s-sym">${c.label}</div>
-        <div class="s-name">${c.name}</div>
+        <div class="s-name" style="display:flex;align-items:center">
+          <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#1A7645;margin-right:3px;vertical-align:middle"></span>24h
+        </div>
         <div class="s-price">${p}</div>
-        <div class="s-chg">${fmtChg(d.usd_24h_change)}</div>
+        <div class="s-chg" style="display:flex;flex-direction:column;gap:1px">
+          <span>${fmtChg(d.usd_24h_change)} <span style="font-size:9px;color:var(--muted);font-family:var(--sans)">24h</span></span>
+        </div>
       </div>`;
     });
 
