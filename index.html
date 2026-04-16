@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard · Rob</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,600&family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #F2EFE8;
+      --card:      #FDFCFA;
+      --border:    rgba(10,22,40,0.09);
+      --shadow:    0 1px 2px rgba(10,22,40,0.04), 0 4px 16px rgba(10,22,40,0.07);
+      --navy:      #0A1628;
+      --gold:      #B8892A;
+      --green:     #1A7645;
+      --red:       #B83232;
+      --muted:     #7A7E8E;
+      --light:     #EAE7DF;
+      --serif:     'Playfair Display', Georgia, serif;
+      --sans:      'DM Sans', system-ui, sans-serif;
+      --mono:      'JetBrains Mono', monospace;
+      --r:         10px;
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--navy);
+      min-height: 100vh;
+      padding: 20px 20px 60px;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 26px;
+      background: var(--navy);
+      border-radius: var(--r);
+      margin-bottom: 18px;
+      color: #fff;
+    }
+    .header h1 {
+      font-family: var(--serif);
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+    .header .sub {
+      font-size: 12px;
+      opacity: 0.55;
+      margin-top: 3px;
+      text-transform: capitalize;
+    }
+    .refresh-btn {
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .refresh-btn:hover { background: rgba(255,255,255,0.2); }
+
+    /* ── GRID ── */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .full { grid-column: 1 / -1; }
+
+    @media (max-width: 700px) {
+      .grid { grid-template-columns: 1fr; }
+      .full { grid-column: 1; }
+      body { padding: 12px 12px 60px; }
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--card);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 13px 18px 11px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-header .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .card-header h2 {
+      font-family: var(--serif);
+      font-size: 13px;
+      font-weight: 600;
+      flex: 1;
+      letter-spacing: 0.1px;
+    }
+    .card-header .upd {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+    .card-body { padding: 15px 18px; }
+
+    .dot-gold    { background: var(--gold); }
+    .dot-navy    { background: var(--navy); }
+    .dot-green   { background: var(--green); }
+    .dot-purple  { background: #6B4FA0; }
+    .dot-terra   { background: #B05B38; }
+    .dot-teal    { background: #1A7A7A; }
+    .dot-coral   { background: var(--gold); }
+
+    /* ── STATE ── */
+    .loading { color: var(--muted); font-size: 12px; padding: 18px 0; text-align: center; }
+    .err { font-size: 12px; color: var(--red); background: #fff0f0; padding: 10px 12px; border-radius: 6px; }
+
+    /* ── STOCKS ── */
+    .stocks-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+      gap: 8px;
+    }
+    .stock-card {
+      background: var(--light);
+      border-radius: 7px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+    }
+    .s-sym  { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 2px; }
+    .s-name { font-size: 10px; color: var(--muted); margin-bottom: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .s-price { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--navy); margin-bottom: 2px; }
+    .s-chg  { font-family: var(--mono); font-size: 11px; font-weight: 600; }
+    .up   { color: var(--green); }
+    .dn   { color: var(--red); }
+    .neu  { color: var(--muted); }
+
+    /* ── NEWS TABS ── */
+    .tab-row { display: flex; gap: 5px; margin-bottom: 12px; flex-wrap: wrap; }
+    .tab {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--light);
+      color: var(--muted);
+      font-family: var(--sans);
+      transition: all 0.12s;
+    }
+    .tab.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+    .panel { display: none; }
+    .panel.on { display: block; }
+
+    .art {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      text-decoration: none;
+      color: inherit;
+    }
+    .art:last-child { border: none; padding-bottom: 0; }
+    .art:hover .art-title { color: var(--gold); }
+    .art-title { font-size: 12px; line-height: 1.45; color: var(--navy); }
+    .art-date  { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+
+    /* ── TODO ── */
+    .todo-list { list-style: none; }
+    .todo-item { display: flex; align-items: flex-start; gap: 9px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .todo-item:last-child { border: none; }
+    .chk {
+      width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px;
+      border: 1.5px solid #C0BDB4; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center; background: var(--card);
+    }
+    .chk.done { background: var(--green); border-color: var(--green); }
+    .chk.done::after { content: '✓'; color: #fff; font-size: 9px; }
+    .t-text { line-height: 1.45; }
+    .t-text.done { text-decoration: line-through; color: var(--muted); }
+    .notice {
+      font-size: 11px; line-height: 1.6; padding: 11px 13px;
+      background: #EEF2FF; color: #3B4DB8; border-radius: 7px; margin-top: 8px;
+    }
+
+    /* ── IMMO ── */
+    .immo-item { padding: 9px 0; border-bottom: 1px solid var(--border); }
+    .immo-item:last-child { border: none; }
+    .immo-title { font-size: 12px; font-weight: 500; color: var(--navy); text-decoration: none; display: block; margin-bottom: 3px; }
+    .immo-title:hover { color: var(--gold); }
+    .immo-meta { font-size: 10px; color: var(--muted); display: flex; gap: 10px; }
+    .immo-price { font-family: var(--mono); font-weight: 600; color: #B05B38; }
+    .immo-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+    .immo-col { padding: 0 16px; }
+    .immo-col:first-child { padding-left: 0; border-right: 1px solid var(--border); padding-right: 20px; }
+    .immo-col:last-child  { padding-left: 20px; padding-right: 0; }
+    .immo-col-title {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.6px; color: var(--muted); margin-bottom: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .immo-col-title span { font-size: 12px; }
+    @media (max-width: 700px) {
+      .immo-2col { grid-template-columns: 1fr; }
+      .immo-col:first-child { border-right: none; border-bottom: 1px solid var(--border); padding: 0 0 16px; margin-bottom: 16px; }
+      .immo-col:last-child  { padding: 0; }
+    }
+    .setup-box {
+      font-size: 11px; line-height: 1.65;
+      padding: 13px 14px; border-radius: 7px;
+      background: #FFF9EC; border: 1px solid #F0D898; color: #7A5A10;
+    }
+    .setup-box strong { display: block; margin-bottom: 4px; font-size: 12px; }
+
+    /* ── NEWS HEIGHT ── */
+    #news .panel, #fin .panel { min-height: 240px; }
+
+    /* ── SPORT KPIs ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .kpi-tile {
+      background: var(--light);
+      border-radius: 8px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+    }
+    .kpi-label {
+      font-size: 10px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;
+    }
+    .kpi-val {
+      font-family: var(--mono); font-size: 22px; font-weight: 600;
+      color: var(--navy); line-height: 1;
+    }
+    .kpi-unit { font-size: 11px; color: var(--muted); font-family: var(--sans); margin-left: 2px; }
+    .kpi-sub  { font-size: 10px; color: var(--muted); margin-top: 4px; }
+    .progress-block { margin-top: 10px; }
+    .progress-label {
+      display: flex; justify-content: space-between;
+      font-size: 10px; color: var(--muted); margin-bottom: 5px;
+    }
+    .progress-bar {
+      height: 5px; background: var(--light); border-radius: 99px;
+      border: 1px solid var(--border); overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, var(--green), #4EAD72);
+      transition: width 0.6s ease;
+    }
+    .dot-sport { background: #1A7A5A; }
+
+    /* ── SPORT WEEK VIEW ── */
+    .week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+    @media (max-width: 700px) {
+      .week-grid { grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    }
+    .day-col {
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+    }
+    .day-name {
+      font-size: 9px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.6px; color: var(--muted);
+    }
+    .day-num {
+      font-family: var(--mono); font-size: 11px; color: var(--muted);
+    }
+    .day-bubble {
+      width: 100%; min-height: 68px; border-radius: 8px;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 4px; padding: 8px 4px;
+      border: 1px solid var(--border); text-align: center;
+      transition: transform 0.1s;
+    }
+    .day-bubble.rest     { background: var(--light); }
+    .day-bubble.active   { background: #E8F5EE; border-color: #A8D8BC; }
+    .day-bubble.today    { border-color: var(--navy); border-width: 1.5px; }
+    .day-bubble.future   { background: var(--card); opacity: 0.4; }
+    .day-sport-icon      { font-size: 18px; line-height: 1; }
+    .day-sport-name      { font-size: 9px; font-weight: 600; color: #1A7645; line-height: 1.3; }
+    .day-sport-dur       { font-family: var(--mono); font-size: 9px; color: var(--muted); }
+    .day-rest-label      { font-size: 9px; color: var(--muted); }
+    .week-label {
+      font-size: 10px; color: var(--muted); text-align: right;
+      margin-bottom: 8px; font-style: italic;
+    }
+    .dot-deal  { background: #8B4FA0; }
+    .weather-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(255,255,255,0.1); border-radius: 8px;
+      padding: 8px 14px; border: 1px solid rgba(255,255,255,0.15);
+    }
+    .w-icon  { font-size: 22px; line-height: 1; }
+    .w-temp  { font-family: var(--mono); font-size: 20px; font-weight: 600; color: #fff; }
+    .w-right { display: flex; flex-direction: column; gap: 1px; }
+    .w-cond  { font-size: 11px; color: rgba(255,255,255,0.75); }
+    .w-range { font-size: 10px; color: rgba(255,255,255,0.5); font-family: var(--mono); }
+
+    /* ── FUN FACT + QUOTE ── */
+    .fact-quote-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    }
+    @media (max-width: 700px) { .fact-quote-grid { grid-template-columns: 1fr; } }
+    .fact-box, .quote-box {
+      background: var(--card); border-radius: var(--r);
+      box-shadow: var(--shadow); border: 1px solid var(--border);
+      padding: 15px 18px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .fact-label {
+      font-size: 9px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--muted);
+    }
+    .fact-text { font-size: 13px; line-height: 1.55; color: var(--navy); }
+    .fact-source { font-size: 10px; color: var(--muted); font-style: italic; }
+    .quote-text {
+      font-family: var(--serif); font-size: 14px; font-style: italic;
+      line-height: 1.6; color: var(--navy);
+    }
+    .quote-text::before { content: '\201C'; }
+    .quote-text::after  { content: '\201D'; }
+    .quote-author { font-size: 11px; color: var(--muted); }
+
+    /* ── DEALS / M&A ── */
+    .dot-deal  { background: #8B4FA0; }
+    .book-wrap { display: flex; gap: 14px; align-items: flex-start; }
+    .book-spine {
+      width: 52px; height: 74px; border-radius: 3px 5px 5px 3px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+      box-shadow: -2px 2px 6px rgba(0,0,0,0.12);
+    }
+    .book-title { font-family: var(--serif); font-size: 15px; color: var(--navy); line-height: 1.3; margin-bottom: 3px; }
+    .book-author { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+    .book-tag {
+      display: inline-block; font-size: 10px; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px; letter-spacing: 0.3px;
+      background: var(--light); color: var(--muted); margin-bottom: 7px;
+    }
+    .book-desc { font-size: 11px; color: var(--muted); line-height: 1.55; }
+    .book-num { font-family: var(--mono); font-size: 10px; color: #C0BDB4; margin-top: 10px; }
+
+    /* ── CONFIG ── */
+    .cfg-btn {
+      position: fixed; bottom: 18px; right: 18px;
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--navy); color: #fff; border: none;
+      font-size: 15px; cursor: pointer; z-index: 200;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    .cfg-panel {
+      display: none; position: fixed;
+      bottom: 66px; right: 18px; width: 300px;
+      background: var(--card); border-radius: var(--r);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      border: 1px solid var(--border);
+      padding: 18px; z-index: 200;
+    }
+    .cfg-panel.on { display: block; }
+    .cfg-panel h3 { font-size: 13px; font-family: var(--serif); margin-bottom: 13px; }
+    .cfg-field { margin-bottom: 10px; }
+    .cfg-field label { display: block; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .cfg-field input {
+      width: 100%; padding: 7px 9px; border: 1px solid var(--border);
+      border-radius: 5px; font-size: 11px; font-family: var(--mono);
+      color: var(--navy); background: var(--bg);
+    }
+    .cfg-save {
+      width: 100%; padding: 8px; background: var(--navy); color: #fff;
+      border: none; border-radius: 6px; font-size: 12px; font-family: var(--sans);
+      cursor: pointer; margin-top: 4px;
+    }
+    .cfg-note { font-size: 10px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <h1 id="greeting">Bonjour Rob</h1>
+      <div class="sub" id="date-str"></div>
+    </div>
+    <div id="weather-bar"><div class="weather-bar"><span class="w-icon">⟳</span><span class="w-temp" style="font-size:13px;color:rgba(255,255,255,0.5)">…</span></div></div>
+    <button class="refresh-btn" onclick="init()">↻ Actualiser</button>
+  </div>
+
+  <!-- FUN FACT + QUOTE -->
+  <div class="fact-quote-grid" style="margin-bottom:14px">
+    <div class="fact-box">
+      <div class="fact-label">🔬 Le saviez-vous ?</div>
+      <div class="fact-text" id="fact-text">Chargement…</div>
+      <div class="fact-source" id="fact-src"></div>
+    </div>
+    <div class="quote-box">
+      <div class="fact-label">✦ Citation du jour</div>
+      <div class="quote-text" id="quote-text">Chargement…</div>
+      <div class="quote-author" id="quote-author"></div>
+    </div>
+  </div>
+
+  <!-- GRID -->
+  <div class="grid">
+
+    <!-- SPORT KPIs -->
+    <div class="card full">
+      <div class="card-header">
+        <div class="dot dot-sport"></div>
+        <h2>KPIs Sport · Trail Running</h2>
+        <span class="upd" id="upd-sport"></span>
+      </div>
+      <div class="card-body"><div id="sport"></div></div>
+    </div>
+
+    <!-- COURS & CRYPTOS -->
+    <div class="card full">
+      <div class="card-header">
+        <div class="dot dot-gold"></div>
+        <h2>Cours & Cryptos</h2>
+        <span class="upd" id="upd-stocks"></span>
+      </div>
+      <div class="card-body"><div id="stocks" class="loading">Chargement…</div></div>
+    </div>
+
+    <!-- TODO -->
+    <div class="card">
+      <div class="card-header">
+        <div class="dot dot-purple"></div>
+        <h2>To-do du jour</h2>
+        <span class="upd" id="upd-todos"></span>
+      </div>
+      <div class="card-body"><div id="todos" class="loading">Chargement…</div></div>
+    </div>
+
+    <!-- LIVRE -->
+    <div class="card">
+      <div class="card-header">
+        <div class="dot dot-coral"></div>
+        <h2>Lecture du jour</h2>
+      </div>
+      <div class="card-body"><div id="book"></div></div>
+    </div>
+
+    <!-- REVUE DE PRESSE -->
+    <div class="card">
+      <div class="card-header">
+        <div class="dot dot-navy"></div>
+        <h2>Revue de presse</h2>
+        <span class="upd" id="upd-news"></span>
+      </div>
+      <div class="card-body"><div id="news" class="loading">Chargement…</div></div>
+    </div>
+
+    <!-- ACTU FINANCIÈRE & TECH -->
+    <div class="card">
+      <div class="card-header">
+        <div class="dot dot-green"></div>
+        <h2>Actu financière & tech</h2>
+        <span class="upd" id="upd-fin"></span>
+      </div>
+      <div class="card-body"><div id="fin" class="loading">Chargement…</div></div>
+    </div>
+
+    <!-- DEALS / M&A / LEVÉES -->
+    <div class="card full">
+      <div class="card-header">
+        <div class="dot dot-deal"></div>
+        <h2>Deals · Levées de fonds · M&amp;A</h2>
+        <span class="upd" id="upd-deals"></span>
+      </div>
+      <div class="card-body"><div id="deals" class="loading">Chargement…</div></div>
+    </div>
+
+    <!-- IMMO -->
+    <div class="card full">
+      <div class="card-header">
+        <div class="dot dot-terra"></div>
+        <h2>Annonces immobilières</h2>
+        <span class="upd" id="upd-immo"></span>
+      </div>
+      <div class="card-body">
+        <div class="immo-2col">
+          <div class="immo-col">
+            <div class="immo-col-title"><span>🏙</span> Lyon</div>
+            <div id="immo-lyon"></div>
+          </div>
+          <div class="immo-col">
+            <div class="immo-col-title"><span>🏔</span> Chamonix</div>
+            <div id="immo-chx"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANNONCES DIVERSES -->
+    <div class="card full">
+      <div class="card-header">
+        <div class="dot dot-teal"></div>
+        <h2>Annonces diverses · LeBonCoin</h2>
+        <span class="upd" id="upd-divers"></span>
+      </div>
+      <div class="card-body"><div id="divers"></div></div>
+    </div>
+
+  </div>
+
+  <!-- CONFIG -->
+  <button class="cfg-btn" onclick="toggleCfg()" title="Configuration">⚙</button>
+  <div class="cfg-panel" id="cfg">
+    <h3>Configuration</h3>
+    <div class="cfg-field">
+      <label>JSONBin Master Key</label>
+      <input id="c-key" type="password" placeholder="$2a$10$...">
+    </div>
+    <div class="cfg-field">
+      <label>Bin ID · To-dos Notion</label>
+      <input id="c-todos" placeholder="64abc123...">
+    </div>
+    <div class="cfg-field">
+      <label>Bin ID · Annonces Immo Lyon</label>
+      <input id="c-immo" placeholder="64def456...">
+    </div>
+    <div class="cfg-field">
+      <label>Bin ID · Annonces Immo Chamonix</label>
+      <input id="c-chx" placeholder="64jkl012...">
+    </div>
+    <div class="cfg-field">
+      <label>Bin ID · Annonces Diverses</label>
+      <input id="c-divers" placeholder="64ghi789...">
+    </div>
+    <div class="cfg-field">
+      <label>Bin ID · KPIs Sport</label>
+      <input id="c-sport" placeholder="64mno345...">
+    </div>
+    <button class="cfg-save" onclick="saveCfg()">Enregistrer & Actualiser</button>
+    <div class="cfg-note">Les clés sont stockées dans ton navigateur (localStorage). Elles ne quittent pas ton appareil.</div>
+  </div>
+
+<script>
+// ════════════════════════════════════════════
+// CONFIG (remplie via ⚙ ou directement ici)
+// ════════════════════════════════════════════
+let CFG = {
+  key:    localStorage.getItem('jb_key')    || '',
+  todos:  localStorage.getItem('jb_todos')  || '',
+  immo:   localStorage.getItem('jb_immo')   || '',
+  chx:    localStorage.getItem('jb_chx')    || '',
+  sport:  localStorage.getItem('jb_sport')  || '',
+  divers: localStorage.getItem('jb_divers') || '',
+};
+
+// ════════════════════════════════════════════
+// MÉTÉO (Open-Meteo, sans clé API)
+// ════════════════════════════════════════════
+const WMO = {
+  0:'☀️',1:'🌤',2:'⛅',3:'☁️',
+  45:'🌫',48:'🌫',
+  51:'🌦',53:'🌦',55:'🌧',
+  61:'🌧',63:'🌧',65:'🌧',
+  71:'🌨',73:'🌨',75:'❄️',
+  77:'🌨',80:'🌦',81:'🌧',82:'⛈',
+  85:'🌨',86:'❄️',
+  95:'⛈',96:'⛈',99:'⛈'
+};
+const WMO_LABEL = {
+  0:'Ciel dégagé',1:'Peu nuageux',2:'Partiellement nuageux',3:'Couvert',
+  45:'Brouillard',48:'Brouillard givrant',
+  51:'Bruine légère',53:'Bruine',55:'Bruine forte',
+  61:'Pluie légère',63:'Pluie',65:'Pluie forte',
+  71:'Neige légère',73:'Neige',75:'Neige forte',
+  80:'Averses',81:'Averses',82:'Averses fortes',
+  95:'Orage',96:'Orage avec grêle',99:'Orage violent'
+};
+
+async function loadWeather() {
+  const el = document.getElementById('weather-bar');
+  try {
+    const pos = await new Promise((res, rej) =>
+      navigator.geolocation
+        ? navigator.geolocation.getCurrentPosition(res, () => res({ coords:{ latitude:45.764, longitude:4.836 }}), { timeout:4000 })
+        : res({ coords:{ latitude:45.764, longitude:4.836 }})
+    );
+    const { latitude: lat, longitude: lon } = pos.coords;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weathercode,windspeed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`;
+    const r = await fetch(url);
+    const d = await r.json();
+    const c = d.current;
+    const dd = d.daily;
+    const code = c.weathercode;
+    const icon = WMO[code] || '🌡';
+    const label = WMO_LABEL[code] || '';
+    const tmax = Math.round(dd.temperature_2m_max[0]);
+    const tmin = Math.round(dd.temperature_2m_min[0]);
+    // Reverse geocode city name
+    let city = 'Lyon';
+    try {
+      const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+      const gd = await geo.json();
+      city = gd.address?.city || gd.address?.town || gd.address?.village || 'Lyon';
+    } catch {}
+    el.innerHTML = `<div class="weather-bar">
+      <div class="w-icon">${icon}</div>
+      <div class="w-temp">${Math.round(c.temperature_2m)}°</div>
+      <div class="w-right">
+        <div class="w-cond">${city} · ${label}</div>
+        <div class="w-range">↑${tmax}° ↓${tmin}° · 💨 ${Math.round(c.windspeed_10m)} km/h</div>
+      </div>
+    </div>`;
+  } catch {
+    el.innerHTML = `<div class="weather-bar"><span class="w-temp" style="font-size:12px;opacity:0.5">Météo indisponible</span></div>`;
+  }
+}
+
+// ════════════════════════════════════════════
+// FUN FACTS (rotation quotidienne)
+// ════════════════════════════════════════════
+const FACTS = [
+  { f:"Les pieuvres ont trois cœurs et un sang bleu grâce au cuivre qu'il contient, au lieu du fer.", src:"Biologie marine" },
+  { f:"Un éclair contient assez d'énergie pour griller 100 000 tranches de pain.", src:"Physique atmosphérique" },
+  { f:"La lumière du soleil met environ 8 minutes et 20 secondes pour atteindre la Terre.", src:"Astrophysique" },
+  { f:"Le cerveau humain génère environ 70 000 pensées par jour.", src:"Neurosciences" },
+  { f:"Il y a plus d'étoiles dans l'univers observable que de grains de sable sur toutes les plages de la Terre.", src:"Astronomie" },
+  { f:"Le miel ne se périme jamais. On a trouvé du miel comestible dans des tombes égyptiennes vieilles de 3 000 ans.", src:"Archéologie alimentaire" },
+  { f:"Les fourmis peuvent soulever jusqu'à 50 fois leur propre poids.", src:"Entomologie" },
+  { f:"L'eau chaude peut geler plus vite que l'eau froide — c'est l'effet Mpemba, encore partiellement inexpliqué.", src:"Physique" },
+  { f:"Chaque atome de ton corps a traversé plusieurs étoiles avant d'exister.", src:"Astrophysique" },
+  { f:"Le cœur d'un adulte bat environ 100 000 fois par jour, soit 3 milliards de fois dans une vie.", src:"Physiologie" },
+  { f:"Les requins existent depuis 450 millions d'années — bien avant les arbres (350 Ma) et les dinosaures (230 Ma).", src:"Paléontologie" },
+  { f:"Il y a plus de connexions synaptiques dans un cerveau humain que d'étoiles dans la Voie Lactée.", src:"Neurosciences" },
+  { f:"Une cuillerée à café de matière d'étoile à neutrons pèserait environ un milliard de tonnes.", src:"Astrophysique" },
+  { f:"Les dauphins ont des noms — ils s'appellent mutuellement avec des sifflements uniques tout au long de leur vie.", src:"Éthologie" },
+  { f:"La banane est radioactive. Elle contient du potassium-40, un isotope naturellement radioactif.", src:"Physique nucléaire" },
+  { f:"En termes de génétique, les humains partagent environ 50% de leur ADN avec les bananes.", src:"Génomique" },
+  { f:"Le son est 4 fois plus rapide dans l'eau que dans l'air.", src:"Physique acoustique" },
+  { f:"Les arbres communiquent entre eux via des réseaux de champignons souterrains surnommés le 'Wood Wide Web'.", src:"Écologie forestière" },
+  { f:"La Voie Lactée fait 100 000 années-lumière de diamètre. Voyager à la vitesse de la lumière prendrait 100 000 ans.", src:"Astronomie" },
+  { f:"Les chats ont un muscle facial qui les empêche de sourire comme les humains — chez d'autres espèces, ce muscle est absent.", src:"Anatomie comparée" },
+  { f:"Cleopâtre a vécu plus proche de l'invention de l'iPhone que de la construction des pyramides de Gizeh.", src:"Histoire" },
+  { f:"L'ADN humain contient environ 3 milliards de paires de bases. Si on déroulait l'ADN d'une seule cellule, il ferait 2 mètres.", src:"Biologie moléculaire" },
+  { f:"La Tour Eiffel est 15 cm plus haute en été qu'en hiver, en raison de la dilatation thermique du métal.", src:"Physique des matériaux" },
+  { f:"Oxford University existe depuis plus longtemps que les Aztèques — elle a été fondée vers 1096, les Aztèques vers 1300.", src:"Histoire" },
+  { f:"Le virus de la grippe mute si vite qu'un vaccin de l'année passée peut être inefficace l'année suivante.", src:"Virologie" },
+  { f:"Les pieuvres voient les couleurs malgré leurs yeux daltoniens, probablement via leur peau.", src:"Neurosciences" },
+  { f:"À chaque seconde, le soleil convertit 4 millions de tonnes de masse en énergie pure via la fusion nucléaire.", src:"Physique stellaire" },
+  { f:"Les chevaux ne peuvent pas respirer par la bouche — ils sont des respirateurs nasaux obligatoires.", src:"Physiologie animale" },
+  { f:"Il existe plus de façons de mélanger un jeu de 52 cartes qu'il n'y a d'atomes dans la Voie Lactée.", src:"Mathématiques combinatoires" },
+  { f:"Les baleines bleues ont un cœur si gros qu'un humain pourrait nager dans ses artères.", src:"Biologie marine" },
+  { f:"Le premier texte SMS jamais envoyé disait 'Merry Christmas', le 3 décembre 1992.", src:"Histoire des télécoms" },
+  { f:"Les crabes ne marchent pas vraiment 'de côté' — certaines espèces marchent en avant. C'est notre perception qui est biaisée.", src:"Zoologie" },
+  { f:"L'or dans l'univers s'est formé lors de collisions de deux étoiles à neutrons.", src:"Astrophysique" },
+  { f:"La cognition du corbeau est comparable à celle d'un chimpanzé — ils utilisent des outils et planifient l'avenir.", src:"Éthologie cognitive" },
+  { f:"Le corps humain contient assez de carbone pour faire environ 900 crayons.", src:"Chimie du corps humain" },
+  { f:"La durée de vie d'un globule rouge est d'environ 120 jours. Ton sang est entièrement renouvelé plusieurs fois par an.", src:"Hématologie" },
+  { f:"Les manchots se noient — ils peuvent respirer sous l'eau en apnée mais ne peuvent pas extraire l'oxygène comme les poissons.", src:"Biologie" },
+  { f:"Il y a plus de façons pour un neurone de se connecter que d'atomes dans l'univers observable.", src:"Neurosciences" },
+  { f:"Le verre est techniquement un liquide très visqueux, non un solide cristallin — il s'écoule sur des millions d'années.", src:"Sciences des matériaux" },
+  { f:"Les humains sont les seuls animaux qui rougissent — Darwin l'appelait 'l'expression la plus particulière de l'homme'.", src:"Éthologie humaine" },
+  { f:"Si l'on compressait tout l'espace vide des atomes humains, l'humanité entière tiendrait dans un dé à coudre.", src:"Physique atomique" },
+  { f:"Les langues disparaissent à un rythme d'environ une toutes les deux semaines.", src:"Linguistique" },
+];
+
+// ════════════════════════════════════════════
+// CITATIONS (bonheur, sérénité, joie — rotation)
+// ════════════════════════════════════════════
+const QUOTES = [
+  { q:"Le bonheur n'est pas quelque chose de prêt à l'emploi. Il vient de tes propres actions.", a:"Dalaï Lama" },
+  { q:"La joie ne vient pas de ce qui nous entoure, mais de ce que nous sommes.", a:"Charles Wagner" },
+  { q:"Celui qui n'est pas satisfait par peu ne sera jamais satisfait par rien.", a:"Épicure" },
+  { q:"La paix intérieure commence au moment où tu choisis de ne pas permettre à une autre personne ou à un événement de contrôler tes émotions.", a:"Pema Chödrön" },
+  { q:"Soyez heureux dans l'instant, c'est là que tout est.", a:"Mère Teresa" },
+  { q:"Le calme n'est pas l'absence de bruit. C'est être en paix malgré lui.", a:"Thich Nhat Hanh" },
+  { q:"Le présent est le seul temps dont nous disposons réellement.", a:"Blaise Pascal" },
+  { q:"Apprenez à vous contenter de ce que vous avez. C'est la richesse naturelle ; celle qui vient de l'ambition n'a pas de limites.", a:"Socrate" },
+  { q:"Si tu veux être heureux, sois-le.", a:"Léon Tolstoï" },
+  { q:"Rien ne peut vous apporter la paix — sinon vous-même.", a:"Ralph Waldo Emerson" },
+  { q:"Le secret du bonheur est la liberté, et le secret de la liberté est le courage.", a:"Thucydide" },
+  { q:"Celui qui cherche la joie tout en la vivant est comme un poisson qui cherche l'eau.", a:"Maître Eckhart" },
+  { q:"La simplicité est la sophistication ultime.", a:"Léonard de Vinci" },
+  { q:"Ne court pas après le bonheur. Décide d'être heureux et profite de ta vie.", a:"Voltaire" },
+  { q:"La gratitude transforme ce que nous avons en suffisant, et plus en abondance.", a:"Melodie Beattie" },
+  { q:"Méditer, c'est revenir à soi-même, reprendre contact avec sa propre vie.", a:"Thich Nhat Hanh" },
+  { q:"Le but de toute méditation n'est pas de fuir la vie mais de la vivre pleinement.", a:"Jon Kabat-Zinn" },
+  { q:"Si vous êtes déprimé, vous vivez dans le passé. Si vous êtes anxieux, vous vivez dans le futur. Si vous êtes en paix, vous vivez dans le présent.", a:"Lao-Tseu" },
+  { q:"La joie est ce qui surgit quand on n'essaie plus de l'attraper.", a:"Alan Watts" },
+  { q:"La sérénité n'est pas la liberté des tempêtes, mais la paix au milieu d'elles.", a:"Auteur inconnu" },
+  { q:"Vivre dans le présent, c'est vivre dans la totalité de la vie.", a:"Seneca" },
+  { q:"Ce qui est beau n'a pas besoin de beaucoup — pas plus que les lys besoin de dorer leur blancheur.", a:"Shakespeare" },
+  { q:"Le bonheur, c'est vouloir ce que l'on a, non avoir ce que l'on veut.", a:"Saint Augustin" },
+  { q:"Presque tout fonctionnera à nouveau si vous le débranchez quelques minutes, y compris vous.", a:"Anne Lamott" },
+  { q:"Ne cherche pas à ce que les événements se déroulent comme tu le souhaites, mais veuille qu'ils se déroulent comme ils font, et tu seras en paix.", a:"Épictète" },
+  { q:"La paix est toujours belle.", a:"Walt Whitman" },
+  { q:"Sois content de ce que tu as ; réjouis-toi de la façon dont les choses sont. Quand tu réalises qu'il ne manque rien, le monde entier t'appartient.", a:"Lao-Tseu" },
+  { q:"La joie profonde du cœur est comme un aimant qui oriente le chemin vers la vie.", a:"Mère Teresa" },
+  { q:"Un esprit calme apporte la force intérieure et la confiance en soi, ce qui est très important pour la santé.", a:"Dalaï Lama" },
+  { q:"Soyez présent dans tous les moments de votre vie.", a:"Rumi" },
+  { q:"La plénitude n'est pas quelque chose que vous trouvez, c'est quelque chose que vous cultivez.", a:"Pema Chödrön" },
+  { q:"Les gens heureux construisent leur monde intérieur. Les malheureux blâment leur monde extérieur.", a:"Marcus Aurelius" },
+  { q:"Il ne sert à rien de courir ; il faut partir à point.", a:"Jean de La Fontaine" },
+  { q:"Là où il y a de l'amour, il y a de la vie.", a:"Mahatma Gandhi" },
+  { q:"Chaque matin, nous renaissons. Ce que nous faisons aujourd'hui est ce qui compte le plus.", a:"Bouddha" },
+  { q:"On n'est jamais aussi malheureux qu'on croit, ni aussi heureux qu'on espère.", a:"La Rochefoucauld" },
+  { q:"Personne ne peut vous rendre heureux si vous ne décidez pas de l'être.", a:"Abraham Lincoln" },
+  { q:"Le mieux est l'ennemi du bien.", a:"Voltaire" },
+  { q:"La beauté des choses existe dans l'esprit qui les contemple.", a:"David Hume" },
+  { q:"Apprends à te contenter du peu que tu as, car sans cela tu ne seras jamais satisfait.", a:"Benjamin Franklin" },
+  { q:"Il n'y a qu'une façon d'apprendre à vivre : c'est de vivre.", a:"Marc Aurèle" },
+];
+
+function renderFactAndQuote() {
+  const start = new Date(new Date().getFullYear(), 0, 1).getTime();
+  const day = Math.floor((Date.now() - start) / 86400000);
+  const fact  = FACTS [day % FACTS.length];
+  const quote = QUOTES[day % QUOTES.length];
+  document.getElementById('fact-text').textContent   = fact.f;
+  document.getElementById('fact-src').textContent    = fact.src;
+  document.getElementById('quote-text').textContent  = quote.q;
+  document.getElementById('quote-author').textContent = '— ' + quote.a;
+}
+
+// ════════════════════════════════════════════
+const BOOKS = [
+  { t:"Zero to One", a:"Peter Thiel & Blake Masters", y:2014, tag:"Startup", d:"Construire quelque chose de radicalement nouveau plutôt que copier ce qui existe.", bg:"#0A1628" },
+  { t:"The Lean Startup", a:"Eric Ries", y:2011, tag:"Méthode", d:"Construire, mesurer, apprendre — le cycle itératif qui réduit le risque d'échec.", bg:"#1A7645" },
+  { t:"Good to Great", a:"Jim Collins", y:2001, tag:"Management", d:"Pourquoi certaines entreprises franchissent le cap vers l'excellence et d'autres non.", bg:"#4A235A" },
+  { t:"The Hard Thing About Hard Things", a:"Ben Horowitz", y:2014, tag:"Leadership", d:"Les vrais problèmes du management — ceux pour lesquels il n'existe aucun manuel.", bg:"#1B3A5E" },
+  { t:"Thinking, Fast and Slow", a:"Daniel Kahneman", y:2011, tag:"Psychologie", d:"Deux systèmes de pensée, leurs biais, et comment prendre de meilleures décisions.", bg:"#7A3B00" },
+  { t:"Antifragile", a:"Nassim Nicholas Taleb", y:2012, tag:"Stratégie", d:"Ce qui gagne à être exposé au désordre — au-delà de la simple résilience.", bg:"#3B1A1A" },
+  { t:"The Innovator's Dilemma", a:"Clayton M. Christensen", y:1997, tag:"Innovation", d:"Pourquoi les bonnes entreprises échouent face aux ruptures technologiques.", bg:"#003344" },
+  { t:"Crossing the Chasm", a:"Geoffrey A. Moore", y:1991, tag:"Marketing", d:"La stratégie pour passer du marché des early adopters au grand marché.", bg:"#1A4A2E" },
+  { t:"High Output Management", a:"Andy Grove", y:1983, tag:"Management", d:"Le livre de chevet de beaucoup de CEO en Silicon Valley — dense et concret.", bg:"#2A2A1A" },
+  { t:"Measure What Matters", a:"John Doerr", y:2018, tag:"Pilotage", d:"Les OKR expliqués par celui qui les a apportés chez Google et Intel.", bg:"#1A1A7A" },
+  { t:"Principles", a:"Ray Dalio", y:2017, tag:"Leadership", d:"Les règles de vie et de management du fondateur de Bridgewater Associates.", bg:"#1A3A1A" },
+  { t:"Never Split the Difference", a:"Chris Voss", y:2016, tag:"Négociation", d:"Les techniques de négociation d'un ex-négociateur du FBI — très applicable.", bg:"#3A1A00" },
+  { t:"Atomic Habits", a:"James Clear", y:2018, tag:"Productivité", d:"La science des petites habitudes et leur effet composé sur le long terme.", bg:"#003A3A" },
+  { t:"Deep Work", a:"Cal Newport", y:2016, tag:"Productivité", d:"La concentration profonde comme avantage compétitif dans l'économie de la distraction.", bg:"#2A1A3A" },
+  { t:"Blue Ocean Strategy", a:"W. Chan Kim & R. Mauborgne", y:2004, tag:"Stratégie", d:"Créer un espace de marché sans concurrence plutôt que se battre dans les océans rouges.", bg:"#003366" },
+  { t:"Traction", a:"G. Weinberg & J. Mares", y:2014, tag:"Growth", d:"19 canaux de croissance — un framework systématique pour trouver les siens.", bg:"#1A3300" },
+  { t:"The Mom Test", a:"Rob Fitzpatrick", y:2013, tag:"Startup", d:"Comment avoir de vraies conversations clients sans se faire mentir par politesse.", bg:"#4A2A00" },
+  { t:"Essentialism", a:"Greg McKeown", y:2014, tag:"Productivité", d:"La discipline de faire moins mais mieux — le pouvoir du choix délibéré.", bg:"#1A1A3A" },
+  { t:"Blitzscaling", a:"Reid Hoffman & Chris Yeh", y:2018, tag:"Startup", d:"L'art de scaler une entreprise à vitesse extrême — et les risques associés.", bg:"#3A1A00" },
+  { t:"The Effective Executive", a:"Peter F. Drucker", y:1966, tag:"Management", d:"Ce que font réellement les executives efficaces — fondamental et toujours d'actualité.", bg:"#003322" },
+  { t:"Hooked", a:"Nir Eyal", y:2014, tag:"Product", d:"Le modèle en 4 étapes pour créer des produits qui créent des habitudes.", bg:"#220033" },
+  { t:"The Outsiders", a:"William N. Thorndike", y:2012, tag:"Finance", d:"8 CEOs peu connus dont les retours ont battu Buffett — la puissance de l'allocation de capital.", bg:"#1A2A00" },
+  { t:"Poor Charlie's Almanack", a:"Charlie Munger", y:2005, tag:"Investissement", d:"La sagesse de l'associé de Buffett — mental models, décisions, psychologie.", bg:"#2A2A00" },
+  { t:"The Black Swan", a:"Nassim Nicholas Taleb", y:2007, tag:"Risque", d:"L'impact des événements hautement improbables — et pourquoi on les ignore toujours.", bg:"#1A001A" },
+  { t:"Rework", a:"Jason Fried & D.H. Hansson", y:2010, tag:"Business", d:"La méthode Basecamp : travailler moins, croître sainement, rejeter les conventions.", bg:"#001A3A" },
+  { t:"Influence", a:"Robert B. Cialdini", y:1984, tag:"Psychologie", d:"Les 6 principes universels de la persuasion — marketing, vente, négociation.", bg:"#3A0000" },
+  { t:"Sprint", a:"Jake Knapp", y:2016, tag:"Innovation", d:"La méthode Google Ventures pour résoudre les gros problèmes en 5 jours.", bg:"#003A1A" },
+  { t:"The E-Myth Revisited", a:"Michael E. Gerber", y:1995, tag:"Entrepreneuriat", d:"Pourquoi la plupart des petites entreprises échouent — et comment l'éviter.", bg:"#1A0000" },
+  { t:"Competing Against Luck", a:"Clayton M. Christensen", y:2016, tag:"Innovation", d:"Jobs-to-be-Done : ce que les clients embauchent vraiment votre produit pour faire.", bg:"#001A2A" },
+  { t:"Barbarians at the Gate", a:"B. Burrough & J. Helyar", y:1989, tag:"Finance", d:"Le LBO de RJR Nabisco — le livre de référence sur les deals, le pouvoir et l'argent.", bg:"#2A1A00" },
+  { t:"The Personal MBA", a:"Josh Kaufman", y:2010, tag:"Business", d:"Un tour complet des fondamentaux du business sans passer par une école.", bg:"#002A1A" },
+  { t:"Skin in the Game", a:"Nassim Nicholas Taleb", y:2018, tag:"Stratégie", d:"Pourquoi ceux qui prennent les décisions doivent en supporter les conséquences.", bg:"#1A1A00" },
+  { t:"Built to Last", a:"Jim Collins & Jerry Porras", y:1994, tag:"Stratégie", d:"Les habitudes et les cultures des entreprises qui durent des décennies.", bg:"#002233" },
+  { t:"The Checklist Manifesto", a:"Atul Gawande", y:2009, tag:"Processus", d:"Comment une simple checklist réduit les erreurs critiques — dans la médecine comme en business.", bg:"#001A1A" },
+  { t:"Founders at Work", a:"Jessica Livingston", y:2007, tag:"Startup", d:"Les récits bruts des fondateurs de startups emblématiques dans leurs premières années.", bg:"#330020" },
+  { t:"The Art of War", a:"Sun Tzu", y:-500, tag:"Classique", d:"Applicable à la stratégie d'entreprise autant qu'aux batailles militaires.", bg:"#1A0A00" },
+];
+
+// ════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════
+const now = () => new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) : '';
+const fmtChg = v => {
+  const n = parseFloat(v);
+  if (isNaN(n)) return '<span class="neu">—</span>';
+  const cls = n > 0.05 ? 'up' : n < -0.05 ? 'dn' : 'neu';
+  return `<span class="${cls}">${n >= 0 ? '+' : ''}${n.toFixed(2)}%</span>`;
+};
+
+// ════════════════════════════════════════════
+// HEADER
+// ════════════════════════════════════════════
+function renderHeader() {
+  const h = new Date().getHours();
+  const g = h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
+  document.getElementById('greeting').textContent = `${g}, Rob`;
+  const d = new Date().toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  document.getElementById('date-str').textContent = d.charAt(0).toUpperCase() + d.slice(1);
+}
+
+// ════════════════════════════════════════════
+// STOCKS + CRYPTO
+// ════════════════════════════════════════════
+const SYMS = [
+  { s:'META',    n:'Meta Platforms' },
+  { s:'ASML',    n:'ASML' },
+  { s:'TSM',     n:'TSMC' },
+  { s:'REMX',    n:'VanEck Rare Earth' },
+  { s:'^GSPC',   n:'S&P 500' },
+  { s:'URTH',    n:'MSCI World' },
+  { s:'^IXIC',   n:'Nasdaq' },
+];
+
+async function loadStocks() {
+  const el = document.getElementById('stocks');
+  try {
+    const syms = SYMS.map(x => x.s).join(',');
+    const yUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(syms)}&fields=shortName,regularMarketPrice,regularMarketChangePercent`;
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(yUrl)}`;
+    const [stockRes, cryptoRes] = await Promise.all([
+      fetch(proxy),
+      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true'),
+    ]);
+    const raw = await stockRes.json();
+    const stockData = JSON.parse(raw.contents);
+    const quotes = stockData.quoteResponse?.result || [];
+    const crypto = await cryptoRes.json();
+
+    let html = '<div class="stocks-row">';
+    quotes.forEach(q => {
+      const info = SYMS.find(x => x.s === q.symbol) || { n: q.symbol };
+      const isIdx = q.symbol.startsWith('^');
+      const price = q.regularMarketPrice;
+      const pStr = price != null
+        ? (isIdx
+            ? price.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' pts'
+            : '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+        : '—';
+      html += `<div class="stock-card">
+        <div class="s-sym">${info.n}</div>
+        <div class="s-name">${q.shortName || q.symbol}</div>
+        <div class="s-price">${pStr}</div>
+        <div class="s-chg">${fmtChg(q.regularMarketChangePercent)}</div>
+      </div>`;
+    });
+
+    const coins = [
+      { id:'bitcoin',  label:'BTC', name:'Bitcoin' },
+      { id:'ethereum', label:'ETH', name:'Ethereum' },
+    ];
+    coins.forEach(c => {
+      const d = crypto[c.id];
+      if (!d) return;
+      const p = '$' + d.usd.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      html += `<div class="stock-card">
+        <div class="s-sym">${c.label}</div>
+        <div class="s-name">${c.name}</div>
+        <div class="s-price">${p}</div>
+        <div class="s-chg">${fmtChg(d.usd_24h_change)}</div>
+      </div>`;
+    });
+
+    html += '</div>';
+    el.innerHTML = html;
+    document.getElementById('upd-stocks').textContent = now();
+  } catch (e) {
+    el.innerHTML = `<div class="err">Impossible de charger les cours — ${e.message}</div>`;
+  }
+}
+
+// ════════════════════════════════════════════
+// RSS via rss2json.com
+// ════════════════════════════════════════════
+async function fetchFeed(url, n = 5) {
+  const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=${n}`);
+  const d = await r.json();
+  return d.status === 'ok' ? (d.items || []) : [];
+}
+
+function buildTabs(feeds, results, prefix) {
+  let html = `<div class="tab-row">`;
+  feeds.forEach((f, i) => html += `<button class="tab ${i===0?'on':''}" onclick="swTab('${prefix}','${f.id}')">${f.label}</button>`);
+  html += `</div>`;
+  feeds.forEach((f, i) => {
+    html += `<div class="panel ${i===0?'on':''}" id="${prefix}-${f.id}">`;
+    const items = results[i];
+    if (!items || items.length === 0) {
+      html += `<div style="font-size:12px;color:var(--muted);padding:10px 0">Flux indisponible — réessaie plus tard.</div>`;
+    } else {
+      items.slice(0, 5).forEach(it => {
+        html += `<a class="art" href="${it.link}" target="_blank" rel="noopener">
+          <span class="art-title">${it.title}</span>
+          <span class="art-date">${fmtDate(it.pubDate)}</span>
+        </a>`;
+      });
+    }
+    html += `</div>`;
+  });
+  return html;
+}
+
+function swTab(prefix, id) {
+  document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el => el.classList.remove('on'));
+  document.getElementById(`${prefix}-${id}`)?.classList.add('on');
+  document.querySelectorAll(`#${prefix}-container .tab`).forEach(btn => {
+    btn.classList.toggle('on', btn.getAttribute('onclick')?.includes(`'${id}'`));
+  });
+}
+
+const NEWS_FEEDS = [
+  { id:'monde',  label:'Le Monde',   url:'https://www.lemonde.fr/rss/une.xml' },
+  { id:'echos',  label:'Les Échos',  url:'https://www.lesechos.fr/rss/rss_une.xml' },
+  { id:'afp',    label:'AFP',        url:'https://news.google.com/rss/search?q=source:AFP&hl=fr&gl=FR&ceid=FR:fr' },
+  { id:'finfo',  label:'France Info',url:'https://www.francetvinfo.fr/titres.rss' },
+];
+const FIN_FEEDS = [
+  { id:'dla',     label:'Dans les algos',  url:'https://danslesalgorithmes.net/feed/' },
+  { id:'finary',  label:'Finary',          url:'https://finary.com/blog/rss.xml' },
+  { id:'scarne',  label:'Silicon Carne 🌶', url:'https://siliconcarne.substack.com/feed' },
+];
+const DEAL_FEEDS = [
+  { id:'frenchweb', label:'Frenchweb',   url:'https://www.frenchweb.fr/feed' },
+  { id:'maddyness', label:'Maddyness',   url:'https://www.maddyness.com/feed/' },
+  { id:'sifted',    label:'Sifted EU',   url:'https://sifted.eu/feed/' },
+  { id:'tc',        label:'TechCrunch',  url:'https://techcrunch.com/feed/' },
+];
+
+async function loadNews() {
+  const el = document.getElementById('news');
+  const res = await Promise.allSettled(NEWS_FEEDS.map(f => fetchFeed(f.url)));
+  const items = res.map(r => r.status === 'fulfilled' ? r.value : []);
+  el.innerHTML = `<div id="news-container">${buildTabs(NEWS_FEEDS, items, 'news')}</div>`;
+  document.getElementById('upd-news').textContent = now();
+}
+
+async function loadFin() {
+  const el = document.getElementById('fin');
+  const res = await Promise.allSettled(FIN_FEEDS.map(f => fetchFeed(f.url)));
+  const items = res.map(r => r.status === 'fulfilled' ? r.value : []);
+  el.innerHTML = `<div id="fin-container">${buildTabs(FIN_FEEDS, items, 'fin')}</div>`;
+  document.getElementById('upd-fin').textContent = now();
+}
+
+async function loadDeals() {
+  const el = document.getElementById('deals');
+  const res = await Promise.allSettled(DEAL_FEEDS.map(f => fetchFeed(f.url, 7)));
+  const items = res.map(r => r.status === 'fulfilled' ? r.value : []);
+  el.innerHTML = `<div id="deals-container">${buildTabs(DEAL_FEEDS, items, 'deals')}</div>`;
+  document.getElementById('upd-deals').textContent = now();
+}
+
+// ════════════════════════════════════════════
+// TO-DOS (JSONBin, rempli par Make.com)
+// ════════════════════════════════════════════
+async function loadTodos() {
+  const el = document.getElementById('todos');
+  if (!CFG.key || !CFG.todos) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:8px 0">To-dos non configurés.</div>
+      <div class="notice">⚙ Configure JSONBin via le bouton en bas à droite.<br>Make.com pushera tes tâches Notion ici chaque matin à 7h.</div>`;
+    return;
+  }
+  try {
+    const r = await fetch(`https://api.jsonbin.io/v3/b/${CFG.todos}/latest`, {
+      headers: { 'X-Master-Key': CFG.key }
+    });
+    const d = await r.json();
+    const todos = d.record?.todos || [];
+    if (!todos.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:10px 0;text-align:center">Aucune tâche pour aujourd\'hui 🎉</div>';
+      return;
+    }
+    el.innerHTML = `<ul class="todo-list">${todos.map(t => `
+      <li class="todo-item">
+        <div class="chk ${t.checked ? 'done' : ''}"></div>
+        <span class="t-text ${t.checked ? 'done' : ''}">${t.title}</span>
+      </li>`).join('')}</ul>`;
+    document.getElementById('upd-todos').textContent = now();
+  } catch {
+    el.innerHTML = `<div class="err">Erreur chargement to-dos.</div>`;
+  }
+}
+
+// ════════════════════════════════════════════
+// SPORT — vue semaine (JSONBin ou placeholder)
+// ════════════════════════════════════════════
+const SPORT_ICONS = {
+  'trail':      '🏔',
+  'running':    '🏃',
+  'trail running': '🏔',
+  'course à pied': '🏃',
+  'vélo':       '🚴',
+  'cyclisme':   '🚴',
+  'natation':   '🏊',
+  'musculation':'🏋',
+  'yoga':       '🧘',
+  'randonnée':  '🥾',
+  'ski':        '⛷',
+  'escalade':   '🧗',
+  'marche':     '🚶',
+  'tennis':     '🎾',
+  'padel':      '🏓',
+};
+function sportIcon(name) {
+  if (!name) return '—';
+  const k = Object.keys(SPORT_ICONS).find(k => name.toLowerCase().includes(k));
+  return k ? SPORT_ICONS[k] : '🏃';
+}
+
+function buildWeekGrid(days) {
+  const DAY_NAMES = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  const today = new Date();
+  // Find Monday of current week
+  const dow = (today.getDay() + 6) % 7; // 0=Mon
+  const monday = new Date(today); monday.setDate(today.getDate() - dow);
+
+  return `<div class="week-grid">${DAY_NAMES.map((name, i) => {
+    const d = new Date(monday); d.setDate(monday.getDate() + i);
+    const dateStr = d.toISOString().slice(0,10);
+    const isPast   = d < today && d.toDateString() !== today.toDateString();
+    const isToday  = d.toDateString() === today.toDateString();
+    const isFuture = d > today && !isToday;
+    const entry = days ? days.find(x => x.date === dateStr) : null;
+    const hasSport = entry && entry.sport;
+    let bubbleClass = isFuture ? 'future' : hasSport ? 'active' : 'rest';
+    if (isToday) bubbleClass += ' today';
+    return `<div class="day-col">
+      <div class="day-name">${name}</div>
+      <div class="day-num">${d.getDate()}</div>
+      <div class="day-bubble ${bubbleClass}">
+        ${hasSport
+          ? `<div class="day-sport-icon">${sportIcon(entry.sport)}</div>
+             <div class="day-sport-name">${entry.sport}</div>
+             ${entry.duration ? `<div class="day-sport-dur">${entry.duration}</div>` : ''}`
+          : isFuture
+            ? `<div class="day-rest-label" style="font-size:16px;opacity:0.3">·</div>`
+            : `<div class="day-rest-label">Repos</div>`
+        }
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+async function loadSport() {
+  const el = document.getElementById('sport');
+  if (!CFG.key || !CFG.sport) {
+    // Show empty week scaffold as placeholder
+    const today = new Date();
+    const dow = (today.getDay() + 6) % 7;
+    const monday = new Date(today); monday.setDate(today.getDate() - dow);
+    const fakeDays = Array.from({length:7}, (_,i) => {
+      const d = new Date(monday); d.setDate(monday.getDate() + i);
+      return { date: d.toISOString().slice(0,10), sport: null };
+    });
+    el.innerHTML = buildWeekGrid(fakeDays) +
+      `<div class="notice" style="margin-top:10px">📅 Connecte ton agenda via Make.com pour remplir cette vue automatiquement. Configure le Bin ID sport via ⚙.</div>`;
+    return;
+  }
+  try {
+    const r = await fetch(`https://api.jsonbin.io/v3/b/${CFG.sport}/latest`, { headers:{ 'X-Master-Key': CFG.key }});
+    const d = await r.json();
+    const days = d.record?.days || [];
+    el.innerHTML = buildWeekGrid(days);
+    document.getElementById('upd-sport').textContent = now();
+  } catch { el.innerHTML = `<div class="err">Erreur chargement sport.</div>`; }
+}
+
+// ════════════════════════════════════════════
+// IMMO Lyon + Chamonix (2 colonnes)
+// ════════════════════════════════════════════
+function renderImmoCol(listings, elId) {
+  const el = document.getElementById(elId);
+  if (!listings || !listings.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:6px 0">Aucune annonce récente.</div>';
+    return;
+  }
+  el.innerHTML = listings.slice(0, 8).map(l => `
+    <div class="immo-item">
+      <a class="immo-title" href="${l.link||'#'}" target="_blank" rel="noopener">${l.title}</a>
+      <div class="immo-meta">
+        ${l.price   ? `<span class="immo-price">${l.price}</span>` : ''}
+        ${l.surface ? `<span>${l.surface}</span>` : ''}
+        ${l.date    ? `<span>${fmtDate(l.date)}</span>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+async function loadImmo() {
+  const setupBox = city => `<div class="setup-box"><strong>📬 ${city} — à configurer</strong>Crée ton alerte LeBonCoin, Make.com remplira cette colonne automatiquement.</div>`;
+  if (!CFG.key) {
+    document.getElementById('immo-lyon').innerHTML = setupBox('Lyon');
+    document.getElementById('immo-chx').innerHTML  = setupBox('Chamonix');
+    return;
+  }
+  const [lyonRes, chxRes] = await Promise.allSettled([
+    CFG.immo ? fetch(`https://api.jsonbin.io/v3/b/${CFG.immo}/latest`, {headers:{'X-Master-Key':CFG.key}}).then(r=>r.json()) : Promise.resolve(null),
+    CFG.chx  ? fetch(`https://api.jsonbin.io/v3/b/${CFG.chx}/latest`,  {headers:{'X-Master-Key':CFG.key}}).then(r=>r.json()) : Promise.resolve(null),
+  ]);
+  if (CFG.immo && lyonRes.status==='fulfilled' && lyonRes.value) renderImmoCol(lyonRes.value.record?.listings, 'immo-lyon');
+  else document.getElementById('immo-lyon').innerHTML = setupBox('Lyon');
+  if (CFG.chx  && chxRes.status==='fulfilled'  && chxRes.value)  renderImmoCol(chxRes.value.record?.listings,  'immo-chx');
+  else document.getElementById('immo-chx').innerHTML  = setupBox('Chamonix');
+  document.getElementById('upd-immo').textContent = now();
+}
+
+// ════════════════════════════════════════════
+// ANNONCES DIVERSES (JSONBin, rempli par Make.com/Gmail)
+// ════════════════════════════════════════════
+async function loadDivers() {
+  const el = document.getElementById('divers');
+  if (!CFG.key || !CFG.divers) {
+    el.innerHTML = `<div class="setup-box">
+      <strong>🔍 Configuration à venir</strong>
+      Crée tes alertes LeBonCoin (vélo, etc.), Make.com surveillera les emails et affichera
+      les annonces ici — avec titre, prix, état et lien direct. Plusieurs recherches simultanées possibles.<br><br>
+      Configure le Bin ID via le bouton ⚙ quand tu es prêt.
+    </div>`;
+    return;
+  }
+  try {
+    const r = await fetch(`https://api.jsonbin.io/v3/b/${CFG.divers}/latest`, {
+      headers: { 'X-Master-Key': CFG.key }
+    });
+    const d = await r.json();
+    const listings = d.record?.listings || [];
+    if (!listings.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">Aucune nouvelle annonce.</div>';
+      return;
+    }
+    // Group by category/search if provided
+    const grouped = {};
+    listings.forEach(l => {
+      const cat = l.category || 'Divers';
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(l);
+    });
+    let html = '';
+    Object.entries(grouped).forEach(([cat, items]) => {
+      if (Object.keys(grouped).length > 1) {
+        html += `<div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px">${cat}</div>`;
+      }
+      items.slice(0, 10).forEach(l => {
+        html += `<div class="immo-item">
+          <a class="immo-title" href="${l.link || '#'}" target="_blank" rel="noopener">${l.title}</a>
+          <div class="immo-meta">
+            ${l.price ? `<span class="immo-price">${l.price}</span>` : ''}
+            ${l.state ? `<span>${l.state}</span>` : ''}
+            ${l.location ? `<span>${l.location}</span>` : ''}
+            ${l.date ? `<span>${fmtDate(l.date)}</span>` : ''}
+          </div>
+        </div>`;
+      });
+    });
+    el.innerHTML = html;
+    document.getElementById('upd-divers').textContent = now();
+  } catch {
+    el.innerHTML = `<div class="err">Erreur chargement annonces diverses.</div>`;
+  }
+}
+// ════════════════════════════════════════════
+function renderBook() {
+  const start = new Date(new Date().getFullYear(), 0, 1).getTime();
+  const day = Math.floor((Date.now() - start) / 86400000);
+  const b = BOOKS[day % BOOKS.length];
+  document.getElementById('book').innerHTML = `
+    <div class="book-wrap">
+      <div class="book-spine" style="background:${b.bg}">📖</div>
+      <div style="flex:1">
+        <div class="book-title">${b.t}</div>
+        <div class="book-author">${b.a} · ${b.y > 0 ? b.y : 'Antiquité'}</div>
+        <div class="book-tag">${b.tag}</div>
+        <div class="book-desc">${b.d}</div>
+        <div class="book-num">Livre ${(day % BOOKS.length) + 1} / ${BOOKS.length}</div>
+      </div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════
+function toggleCfg() {
+  const p = document.getElementById('cfg');
+  p.classList.toggle('on');
+  document.getElementById('c-key').value    = CFG.key;
+  document.getElementById('c-todos').value  = CFG.todos;
+  document.getElementById('c-immo').value   = CFG.immo;
+  document.getElementById('c-chx').value    = CFG.chx;
+  document.getElementById('c-divers').value = CFG.divers;
+  document.getElementById('c-sport').value  = CFG.sport;
+}
+function saveCfg() {
+  CFG.key    = document.getElementById('c-key').value.trim();
+  CFG.todos  = document.getElementById('c-todos').value.trim();
+  CFG.immo   = document.getElementById('c-immo').value.trim();
+  CFG.chx    = document.getElementById('c-chx').value.trim();
+  CFG.divers = document.getElementById('c-divers').value.trim();
+  CFG.sport  = document.getElementById('c-sport').value.trim();
+  localStorage.setItem('jb_key',    CFG.key);
+  localStorage.setItem('jb_todos',  CFG.todos);
+  localStorage.setItem('jb_immo',   CFG.immo);
+  localStorage.setItem('jb_chx',    CFG.chx);
+  localStorage.setItem('jb_divers', CFG.divers);
+  localStorage.setItem('jb_sport',  CFG.sport);
+  document.getElementById('cfg').classList.remove('on');
+  init();
+}
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+window.swTab = function(prefix, id) {
+  const container = document.getElementById(`${prefix}-container`);
+  if (!container) return;
+  container.querySelectorAll('[id^="' + prefix + '-"]').forEach(el => el.classList.remove('on'));
+  document.getElementById(`${prefix}-${id}`)?.classList.add('on');
+  container.querySelectorAll('.tab').forEach(btn => {
+    btn.classList.toggle('on', btn.getAttribute('onclick')?.includes(`'${id}'`));
+  });
+};
+
+async function init() {
+  renderHeader();
+  renderBook();
+  renderFactAndQuote();
+  await Promise.all([loadWeather(), loadSport(), loadStocks(), loadNews(), loadFin(), loadDeals(), loadTodos(), loadImmo(), loadDivers()]);
+}
+
+init();
+</script>
+</body>
+</html>
