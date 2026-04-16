@@ -83,6 +83,7 @@
       .grid { grid-template-columns: 1fr; }
       .full { grid-column: 1; }
       body { padding: 12px 12px 60px; }
+      #top-2col { grid-template-columns: 1fr !important; }
     }
 
     /* ── CARD ── */
@@ -386,6 +387,14 @@
     }
     .fact-text { font-size: 13px; line-height: 1.55; color: var(--navy); }
     .fact-source { font-size: 10px; color: var(--muted); font-style: italic; }
+    .stat-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--light); border: 1px solid var(--border);
+      border-radius: 20px; padding: 3px 9px;
+      font-size: 10px; font-weight: 500; color: var(--navy);
+      font-family: var(--mono);
+    }
+    .stat-pill span { color: var(--muted); font-weight: 400; font-family: var(--sans); }
     .quote-text {
       font-family: var(--serif); font-size: 14px; font-style: italic;
       line-height: 1.6; color: var(--navy);
@@ -458,28 +467,34 @@
     <button class="refresh-btn" onclick="init()">↻ Actualiser</button>
   </div>
 
-  <!-- FUN FACT + QUOTE -->
-  <div class="fact-quote-grid" style="margin-bottom:14px">
-    <div class="fact-box">
-      <div class="fact-label">🔬 Le saviez-vous ?</div>
-      <div class="fact-text" id="fact-text">Chargement…</div>
-      <div class="fact-source" id="fact-src"></div>
-    </div>
-    <div class="quote-box">
-      <div class="fact-label">✦ Citation du jour</div>
-      <div class="quote-text" id="quote-text">Chargement…</div>
-      <div class="quote-author" id="quote-author"></div>
-    </div>
-  </div>
+  <!-- TOP 2-COL : MÉTÉO gauche · FAIT + CITATION droite -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px" id="top-2col">
 
-  <!-- MÉTÉO COMPLÈTE -->
-  <div class="card" style="margin-bottom:14px">
-    <div class="card-header">
-      <div class="dot" style="background:#3B82C4"></div>
-      <h2>Météo du jour</h2>
-      <span class="upd" id="upd-weather-card"></span>
+    <!-- MÉTÉO COMPLÈTE (gauche) -->
+    <div class="card">
+      <div class="card-header">
+        <div class="dot" style="background:#3B82C4"></div>
+        <h2>Météo du jour</h2>
+        <span class="upd" id="upd-weather-card"></span>
+      </div>
+      <div class="card-body"><div id="weather-card" class="loading">Chargement…</div></div>
     </div>
-    <div class="card-body"><div id="weather-card" class="loading">Chargement…</div></div>
+
+    <!-- FAIT + CITATION (droite, empilés) -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="fact-box" style="flex:1">
+        <div class="fact-label">🔬 Le saviez-vous ?</div>
+        <div class="fact-text" id="fact-text">Chargement…</div>
+        <div id="fact-stats" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+        <div class="fact-source" id="fact-src"></div>
+      </div>
+      <div class="quote-box">
+        <div class="fact-label">✦ Citation du jour</div>
+        <div class="quote-text" id="quote-text">Chargement…</div>
+        <div class="quote-author" id="quote-author"></div>
+      </div>
+    </div>
+
   </div>
 
   <!-- GRID -->
@@ -758,48 +773,48 @@ async function loadWeather() {
 // FUN FACTS (rotation quotidienne)
 // ════════════════════════════════════════════
 const FACTS = [
-  { f:"Les pieuvres ont trois cœurs et un sang bleu grâce au cuivre qu'il contient, au lieu du fer.", src:"Biologie marine" },
-  { f:"Un éclair contient assez d'énergie pour griller 100 000 tranches de pain.", src:"Physique atmosphérique" },
-  { f:"La lumière du soleil met environ 8 minutes et 20 secondes pour atteindre la Terre.", src:"Astrophysique" },
-  { f:"Le cerveau humain génère environ 70 000 pensées par jour.", src:"Neurosciences" },
-  { f:"Il y a plus d'étoiles dans l'univers observable que de grains de sable sur toutes les plages de la Terre.", src:"Astronomie" },
-  { f:"Le miel ne se périme jamais. On a trouvé du miel comestible dans des tombes égyptiennes vieilles de 3 000 ans.", src:"Archéologie alimentaire" },
-  { f:"Les fourmis peuvent soulever jusqu'à 50 fois leur propre poids.", src:"Entomologie" },
-  { f:"L'eau chaude peut geler plus vite que l'eau froide — c'est l'effet Mpemba, encore partiellement inexpliqué.", src:"Physique" },
-  { f:"Chaque atome de ton corps a traversé plusieurs étoiles avant d'exister.", src:"Astrophysique" },
-  { f:"Le cœur d'un adulte bat environ 100 000 fois par jour, soit 3 milliards de fois dans une vie.", src:"Physiologie" },
-  { f:"Les requins existent depuis 450 millions d'années — bien avant les arbres (350 Ma) et les dinosaures (230 Ma).", src:"Paléontologie" },
-  { f:"Il y a plus de connexions synaptiques dans un cerveau humain que d'étoiles dans la Voie Lactée.", src:"Neurosciences" },
-  { f:"Une cuillerée à café de matière d'étoile à neutrons pèserait environ un milliard de tonnes.", src:"Astrophysique" },
-  { f:"Les dauphins ont des noms — ils s'appellent mutuellement avec des sifflements uniques tout au long de leur vie.", src:"Éthologie" },
-  { f:"La banane est radioactive. Elle contient du potassium-40, un isotope naturellement radioactif.", src:"Physique nucléaire" },
-  { f:"En termes de génétique, les humains partagent environ 50% de leur ADN avec les bananes.", src:"Génomique" },
-  { f:"Le son est 4 fois plus rapide dans l'eau que dans l'air.", src:"Physique acoustique" },
-  { f:"Les arbres communiquent entre eux via des réseaux de champignons souterrains surnommés le 'Wood Wide Web'.", src:"Écologie forestière" },
-  { f:"La Voie Lactée fait 100 000 années-lumière de diamètre. Voyager à la vitesse de la lumière prendrait 100 000 ans.", src:"Astronomie" },
-  { f:"Les chats ont un muscle facial qui les empêche de sourire comme les humains — chez d'autres espèces, ce muscle est absent.", src:"Anatomie comparée" },
-  { f:"Cleopâtre a vécu plus proche de l'invention de l'iPhone que de la construction des pyramides de Gizeh.", src:"Histoire" },
-  { f:"L'ADN humain contient environ 3 milliards de paires de bases. Si on déroulait l'ADN d'une seule cellule, il ferait 2 mètres.", src:"Biologie moléculaire" },
-  { f:"La Tour Eiffel est 15 cm plus haute en été qu'en hiver, en raison de la dilatation thermique du métal.", src:"Physique des matériaux" },
-  { f:"Oxford University existe depuis plus longtemps que les Aztèques — elle a été fondée vers 1096, les Aztèques vers 1300.", src:"Histoire" },
-  { f:"Le virus de la grippe mute si vite qu'un vaccin de l'année passée peut être inefficace l'année suivante.", src:"Virologie" },
-  { f:"Les pieuvres voient les couleurs malgré leurs yeux daltoniens, probablement via leur peau.", src:"Neurosciences" },
-  { f:"À chaque seconde, le soleil convertit 4 millions de tonnes de masse en énergie pure via la fusion nucléaire.", src:"Physique stellaire" },
-  { f:"Les chevaux ne peuvent pas respirer par la bouche — ils sont des respirateurs nasaux obligatoires.", src:"Physiologie animale" },
-  { f:"Il existe plus de façons de mélanger un jeu de 52 cartes qu'il n'y a d'atomes dans la Voie Lactée.", src:"Mathématiques combinatoires" },
-  { f:"Les baleines bleues ont un cœur si gros qu'un humain pourrait nager dans ses artères.", src:"Biologie marine" },
-  { f:"Le premier texte SMS jamais envoyé disait 'Merry Christmas', le 3 décembre 1992.", src:"Histoire des télécoms" },
-  { f:"Les crabes ne marchent pas vraiment 'de côté' — certaines espèces marchent en avant. C'est notre perception qui est biaisée.", src:"Zoologie" },
-  { f:"L'or dans l'univers s'est formé lors de collisions de deux étoiles à neutrons.", src:"Astrophysique" },
-  { f:"La cognition du corbeau est comparable à celle d'un chimpanzé — ils utilisent des outils et planifient l'avenir.", src:"Éthologie cognitive" },
-  { f:"Le corps humain contient assez de carbone pour faire environ 900 crayons.", src:"Chimie du corps humain" },
-  { f:"La durée de vie d'un globule rouge est d'environ 120 jours. Ton sang est entièrement renouvelé plusieurs fois par an.", src:"Hématologie" },
-  { f:"Les manchots se noient — ils peuvent respirer sous l'eau en apnée mais ne peuvent pas extraire l'oxygène comme les poissons.", src:"Biologie" },
-  { f:"Il y a plus de façons pour un neurone de se connecter que d'atomes dans l'univers observable.", src:"Neurosciences" },
-  { f:"Le verre est techniquement un liquide très visqueux, non un solide cristallin — il s'écoule sur des millions d'années.", src:"Sciences des matériaux" },
-  { f:"Les humains sont les seuls animaux qui rougissent — Darwin l'appelait 'l'expression la plus particulière de l'homme'.", src:"Éthologie humaine" },
-  { f:"Si l'on compressait tout l'espace vide des atomes humains, l'humanité entière tiendrait dans un dé à coudre.", src:"Physique atomique" },
-  { f:"Les langues disparaissent à un rythme d'environ une toutes les deux semaines.", src:"Linguistique" },
+  { f:"Les pieuvres ont trois cœurs : deux pompent le sang vers les branchies, un vers le reste du corps. Leur sang est bleu grâce à l'hémocyanine, un pigment à base de cuivre.", src:"Biologie marine · CNRS", stats:["3 cœurs","Sang bleu (Cu)","~3 ans de vie"] },
+  { f:"Un éclair contient environ 1 milliard de volts et dure 0,2 secondes. Sa température atteint 30 000 K, soit 5 fois plus que la surface du soleil.", src:"Physique atmosphérique · NOAA", stats:["1 milliard de volts","30 000 K","0,2 sec"] },
+  { f:"La lumière du soleil met 8 minutes et 20 secondes pour parcourir les 150 millions de km qui nous séparent. Mais elle met 100 000 ans à traverser le soleil lui-même.", src:"Astrophysique · NASA", stats:["150 M km","8 min 20 sec","100 000 ans (intérieur)"] },
+  { f:"Le cerveau humain génère environ 70 000 pensées par jour et consomme 20% de l'énergie corporelle totale malgré son poids de seulement 1,4 kg.", src:"Neurosciences · MIT", stats:["70 000 pensées/jour","20% de l'énergie","1,4 kg"] },
+  { f:"Il y a plus d'étoiles dans l'univers observable que de grains de sable sur toutes les plages de la Terre. L'univers contient environ 2 000 milliards de galaxies.", src:"Astronomie · ESA/Hubble", stats:["2 000 Mds de galaxies","~10²⁴ étoiles","13,8 Mds d'années"] },
+  { f:"Le miel ne se périme jamais grâce à sa faible teneur en eau et son acidité. On a retrouvé du miel comestible de 3 000 ans dans des tombes égyptiennes.", src:"Archéologie alimentaire · British Museum", stats:["pH 3,2–4,5","<17% eau","3 000 ans attestés"] },
+  { f:"Les fourmis peuvent soulever 50 fois leur poids. Une colonie peut atteindre 700 millions d'individus. Leur biomasse totale est comparable à celle des humains.", src:"Entomologie · E.O. Wilson", stats:["50× leur poids","700 M individus","~20% biomasse terrestre"] },
+  { f:"L'effet Mpemba : l'eau chaude peut geler plus vite que l'eau froide dans certaines conditions. Ce phénomène a été décrit en 1963 par Erasto Mpemba, élève de 13 ans.", src:"Physique · Journal of Chemical Physics", stats:["Découvert en 1963","Encore débattu","Erasto Mpemba, 13 ans"] },
+  { f:"Chaque atome de votre corps vient d'étoiles qui ont explosé il y a plus de 4,5 milliards d'années. Le carbone, le calcium, l'oxygène — tous forgés dans des supernovæ.", src:"Astrophysique · Carl Sagan", stats:["4,5 Mds d'années","Forgé en supernovæ","99% d'espace vide"] },
+  { f:"Le cœur humain bat environ 100 000 fois par jour et pompe 7 500 litres de sang. En une vie, il bat ~3 milliards de fois sans jamais se reposer complètement.", src:"Physiologie · AHA", stats:["100 000 batt./jour","7 500 L/jour","~3 Mds de battements"] },
+  { f:"Les requins existent depuis 450 millions d'années — 200 millions d'années avant les arbres, et 220 millions d'années avant les dinosaures. Ils ont survécu à 5 extinctions de masse.", src:"Paléontologie · Natural History Museum", stats:["450 M d'années","5 extinctions survécues","500+ espèces"] },
+  { f:"Le cerveau humain contient ~86 milliards de neurones et 100 000 milliards de connexions synaptiques — plus que d'étoiles dans la Voie Lactée.", src:"Neurosciences · Azevedo et al., 2009", stats:["86 Mds de neurones","100 000 Mds synapses","1,5 kg"] },
+  { f:"Une cuillère à café de matière d'étoile à neutrons pèserait environ 10 millions de tonnes. Ces étoiles tournent jusqu'à 716 rotations par seconde.", src:"Astrophysique · Neutron Star Group", stats:["10 M tonnes/cuillère","716 rot./sec","~1,4× masse solaire"] },
+  { f:"Les dauphins appellent leurs congénères par nom — chaque individu développe un sifflement unique dans ses 2 premières années. Ils se souviennent de leurs camarades après 20 ans de séparation.", src:"Éthologie · University of Chicago", stats:["Nom unique dès 2 ans","20 ans de mémoire","~50 ans de vie"] },
+  { f:"La banane est légèrement radioactive : elle contient du potassium-40. Il vous faudrait en manger ~80 millions pour recevoir une dose mortelle de radiation.", src:"Physique nucléaire · XKCD What If", stats:["K-40 naturel","0,1 μSv/banane","80 M bananes = dose létale"] },
+  { f:"Humains et bananes partagent ~50% d'ADN. Avec les chimpanzés : 98,7%. Avec les souris : 85%. Avec les levures : ~30%.", src:"Génomique · Human Genome Project", stats:["Chimp: 98,7%","Souris: 85%","Banane: 50%"] },
+  { f:"Le son se propage 4× plus vite dans l'eau (1 480 m/s) que dans l'air (343 m/s), et jusqu'à 13× plus vite dans l'acier. Les baleines bleues exploitent cela sur des milliers de km.", src:"Physique acoustique · NIST", stats:["Air: 343 m/s","Eau: 1 480 m/s","Acier: 5 100 m/s"] },
+  { f:"Les arbres communiquent via le 'Wood Wide Web' : un réseau de champignons mycorhiziens souterrains connecte 90% des plantes terrestres. Ils échangent sucres, eau et signaux d'alarme.", src:"Écologie forestière · Suzanne Simard, UBC", stats:["90% des plantes connectées","Sucres, eau, signaux","1 arbre = 100+ connexions"] },
+  { f:"La Voie Lactée fait 100 000 années-lumière de diamètre. À la vitesse de la lumière, il faudrait 100 000 ans pour la traverser. Notre système solaire en est à 26 000 al du centre.", src:"Astronomie · ESA Gaia", stats:["100 000 al de diamètre","200–400 Mds d'étoiles","26 000 al du centre"] },
+  { f:"Cléopâtre a vécu plus près de l'invention de l'iPhone (2007) que de la construction des pyramides de Gizeh (2560 av. J-C). Elle est morte en 30 av. J-C.", src:"Histoire · chronologie", stats:["Pyramides: -2560","Cléopâtre: -30","iPhone: +2007"] },
+  { f:"L'ADN d'une seule cellule humaine mesure ~2 mètres une fois déroulé. Mis bout à bout, l'ADN de toutes vos cellules ferait ~100 milliards de km — 670 allers-retours Terre-Soleil.", src:"Biologie moléculaire · National Human Genome", stats:["2 m par cellule","3 Mds paires de bases","100 Mds km total"] },
+  { f:"La Tour Eiffel mesure 15 cm de plus en été qu'en hiver : le métal se dilate à la chaleur. À 300 m, une variation de 15 cm correspond à un coefficient de dilatation de ~12×10⁻⁶/°C.", src:"Physique des matériaux · SETE", stats:["15 cm de variation","Δ T ≈ 40°C","300 m de hauteur"] },
+  { f:"Oxford University a été fondée vers 1096. Les Aztèques ont fondé Tenochtitlan en 1325. Oxford est plus vieille que l'empire aztèque de ~230 ans.", src:"Histoire mondiale", stats:["Oxford: ~1096","Aztèques: 1325","230 ans d'écart"] },
+  { f:"Le virus de la grippe mute si vite qu'un vaccin peut devenir inefficace en un an. Son taux de mutation est 1 million de fois supérieur à celui de l'ADN humain.", src:"Virologie · OMS", stats:["~500 000 morts/an","1 M× plus mutant","Nouveaux vaccins/an"] },
+  { f:"L'or se forme lors de collisions d'étoiles à neutrons — des kilonova. La quantité d'or produite lors d'un seul événement peut valoir 100 octillions de dollars.", src:"Astrophysique · Nature, 2017", stats:["Kilonova nécessaire","~1,8× la masse du Soleil","Détecté en 2017 (GW170817)"] },
+  { f:"Le cerveau d'un corbeau est proportionnellement aussi gros que celui d'un grand singe. Ils utilisent des outils, planifient l'avenir, reconnaissent les visages humains et jouent.", src:"Éthologie cognitive · Nature", stats:["QI comparé au chimp","Mémoire: 5+ ans","Reconnaissent 100+ visages"] },
+  { f:"Le corps humain contient assez de carbone pour faire ~900 crayons à papier, assez de fer pour faire un clou, et assez d'eau pour remplir une baignoire.", src:"Chimie du corps humain", stats:["65% oxygène","18% carbone","~60% eau"] },
+  { f:"Un globule rouge vit ~120 jours et parcourt ~500 km dans le corps avant d'être remplacé. Le cœur pompe la totalité du sang toutes les 20 secondes.", src:"Hématologie · NIH", stats:["120 jours de vie","500 km parcourus","Circulation en 20 sec"] },
+  { f:"Il y a plus de façons de mélanger un jeu de 52 cartes (8×10⁶⁷) qu'il n'y a d'atomes dans la Voie Lactée (~10⁶⁸). Chaque mélange est probablement unique dans l'histoire.", src:"Mathématiques combinatoires", stats:["52! = 8×10⁶⁷","Plus que les atomes","Unique à chaque fois"] },
+  { f:"Les langues disparaissent au rythme d'une toutes les deux semaines. Sur 7 000 langues actuelles, la moitié pourraient disparaître d'ici 2100.", src:"Linguistique · UNESCO", stats:["7 000 langues","1 disparition/2 sem.","50% en danger d'ici 2100"] },
+  { f:"Si l'on compressait tout l'espace vide des atomes du corps humain, l'humanité entière tiendrait dans un dé à coudre — mais pèserait ~5 milliards de tonnes.", src:"Physique atomique", stats:["99,9999% de vide","Dé à coudre pour 8 Mds","~5 Mds de tonnes"] },
+  { f:"Les humains sont les seuls animaux qui rougissent intentionnellement — Darwin le qualifiait d'expression 'la plus particulière et la plus humaine de toutes'. Lié aux émotions sociales.", src:"Éthologie humaine · Darwin, 1872", stats:["Unique chez Homo sapiens","Lié au cortex préfrontal","Involontaire"] },
+  { f:"L'Internet mondial consomme environ 200 TWh/an — autant que l'Argentine. Envoyer un email standard génère environ 4g de CO₂, un email avec pièce jointe : 50g.", src:"Numérique · The Shift Project", stats:["200 TWh/an","4g CO₂/email","3,7% des émissions mondiales"] },
+  { f:"Le plus grand organisme vivant connu est un champignon Armillaria ostoyae dans l'Oregon : il couvre 965 hectares, pèse ~600 tonnes et aurait ~8 600 ans.", src:"Écologie · Nature", stats:["965 hectares","600 tonnes","8 600 ans"] },
+  { f:"Une abeille butineuse visite entre 50 et 1 000 fleurs par sortie et parcourt jusqu'à 800 km en une vie pour produire 1/12e de cuillère à café de miel.", src:"Entomologie · apiculture.com", stats:["800 km/vie","1/12 cac de miel","50 000 abeilles/ruche"] },
+  { f:"Le premier SMS jamais envoyé disait 'Merry Christmas'. Il a été envoyé le 3 décembre 1992 par Neil Papworth, 22 ans, via le réseau Vodafone UK.", src:"Histoire des télécoms · Vodafone", stats:["3 décembre 1992","Neil Papworth, 22 ans","Via Orbitel 901"] },
+  { f:"Les baleines bleues sont les plus grands animaux ayant jamais existé — plus grandes que les plus grands dinosaures. Leur cœur pèse 180 kg et bat 4 à 8 fois/minute.", src:"Biologie marine · WWF", stats:["180 kg de cœur","33 m de long","190 tonnes"] },
+  { f:"L'eau recouvre 71% de la Terre, mais 97% est salée, 2% est glacée. Seulement 1% est accessible à l'humanité sous forme d'eau douce liquide.", src:"Hydrologie · USGS", stats:["71% de la surface","97% salée","1% accessible"] },
+  { f:"Le son du Big Bang — si vous pouviez l'entendre — serait une note de si bémol 57 octaves en dessous du do central. Il a été calculé à partir des ondes de pression du CMB.", src:"Cosmologie · Cambridge University", stats:["Si bémol", "57 octaves sous middle C","Calculé par Mark Whittle"] },
+  { f:"Saturne est si peu dense qu'elle flotterait sur l'eau si vous trouviez un océan assez grand. Sa densité moyenne est de 0,687 g/cm³, contre 1 g/cm³ pour l'eau.", src:"Planétologie · NASA", stats:["Densité: 0,687 g/cm³","9,5× le diamètre terrestre","62 lunes connues"] },
+  { f:"Le système immunitaire humain 'se souvient' d'environ 10 millions de pathogènes différents. Les lymphocytes B peuvent produire des anticorps contre des molécules artificielles jamais vues dans la nature.", src:"Immunologie · NIH", stats:["10 M pathogènes mémorisés","~2 × 10¹² lymphocytes","Anticorps en 5–7 jours"] },
+  { f:"Les poulpes peuvent résoudre des labyrinthes, jouer avec des objets et ont des personnalités distinctes. Leurs 2/3 des neurones sont dans leurs 8 bras — chaque bras 'pense' de façon semi-autonome.", src:"Neurobiologie marine · Nature", stats:["500 M neurones","2/3 dans les bras","Résolution de labyrinthes"] },
 ];
 
 // ════════════════════════════════════════════
@@ -854,9 +869,11 @@ function renderFactAndQuote() {
   const day = Math.floor((Date.now() - start) / 86400000);
   const fact  = FACTS [day % FACTS.length];
   const quote = QUOTES[day % QUOTES.length];
-  document.getElementById('fact-text').textContent   = fact.f;
-  document.getElementById('fact-src').textContent    = fact.src;
-  document.getElementById('quote-text').textContent  = quote.q;
+  document.getElementById('fact-text').textContent    = fact.f;
+  document.getElementById('fact-src').textContent     = '— ' + fact.src;
+  document.getElementById('fact-stats').innerHTML     = (fact.stats || [])
+    .map(s => `<div class="stat-pill">${s}</div>`).join('');
+  document.getElementById('quote-text').textContent   = quote.q;
   document.getElementById('quote-author').textContent = '— ' + quote.a;
 }
 
