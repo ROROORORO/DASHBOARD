@@ -327,6 +327,49 @@
     .w-cond  { font-size: 11px; color: rgba(255,255,255,0.75); }
     .w-range { font-size: 10px; color: rgba(255,255,255,0.5); font-family: var(--mono); }
 
+    /* ── MÉTÉO CARTE HORAIRE ── */
+    .weather-card-top {
+      display: flex; align-items: center; gap: 16px;
+      padding-bottom: 14px; border-bottom: 1px solid var(--border); margin-bottom: 14px;
+    }
+    .wc-icon { font-size: 36px; line-height: 1; }
+    .wc-temp { font-family: var(--mono); font-size: 32px; font-weight: 600; color: var(--navy); }
+    .wc-details { flex: 1; }
+    .wc-cond { font-size: 13px; font-weight: 500; color: var(--navy); margin-bottom: 2px; }
+    .wc-meta { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+    .wc-agri {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+      padding: 10px 0 14px; border-bottom: 1px solid var(--border); margin-bottom: 14px;
+    }
+    .agri-tile {
+      background: var(--light); border-radius: 7px; padding: 8px 10px;
+      border: 1px solid var(--border);
+    }
+    .agri-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 3px; }
+    .agri-val { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--navy); }
+    .agri-unit { font-size: 10px; color: var(--muted); font-family: var(--sans); }
+
+    .hourly-scroll {
+      overflow-x: auto; padding-bottom: 6px;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+    }
+    .hourly-row {
+      display: flex; gap: 6px; min-width: max-content;
+    }
+    .hour-col {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      min-width: 52px; padding: 8px 4px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--light);
+    }
+    .hour-col.now { background: #E8F0FB; border-color: #A8BFEA; }
+    .hour-time { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+    .hour-icon { font-size: 16px; line-height: 1; }
+    .hour-temp { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--navy); }
+    .hour-rain { font-size: 9px; color: #3B82C4; font-family: var(--mono); }
+    .hour-wind { font-size: 9px; color: var(--muted); font-family: var(--mono); }
+    .rain-bar-wrap { width: 32px; height: 4px; background: #E0EAF8; border-radius: 99px; overflow: hidden; }
+    .rain-bar-fill { height: 100%; border-radius: 99px; background: #3B82C4; }
+
     /* ── FUN FACT + QUOTE ── */
     .fact-quote-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
@@ -427,6 +470,16 @@
       <div class="quote-text" id="quote-text">Chargement…</div>
       <div class="quote-author" id="quote-author"></div>
     </div>
+  </div>
+
+  <!-- MÉTÉO COMPLÈTE -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-header">
+      <div class="dot" style="background:#3B82C4"></div>
+      <h2>Météo du jour</h2>
+      <span class="upd" id="upd-weather-card"></span>
+    </div>
+    <div class="card-body"><div id="weather-card" class="loading">Chargement…</div></div>
   </div>
 
   <!-- GRID -->
@@ -603,32 +656,44 @@ const WMO_LABEL = {
 };
 
 async function loadWeather() {
-  const el = document.getElementById('weather-bar');
+  const elBar = document.getElementById('weather-bar');
+  const elCard = document.getElementById('weather-card');
   try {
-    const pos = await new Promise((res, rej) =>
+    const pos = await new Promise(res =>
       navigator.geolocation
         ? navigator.geolocation.getCurrentPosition(res, () => res({ coords:{ latitude:45.764, longitude:4.836 }}), { timeout:4000 })
         : res({ coords:{ latitude:45.764, longitude:4.836 }})
     );
     const { latitude: lat, longitude: lon } = pos.coords;
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weathercode,windspeed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`;
-    const r = await fetch(url);
-    const d = await r.json();
-    const c = d.current;
+
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+      + `&current=temperature_2m,apparent_temperature,weathercode,windspeed_10m,precipitation,relativehumidity_2m`
+      + `&hourly=temperature_2m,precipitation_probability,precipitation,windspeed_10m,weathercode`
+      + `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max,uv_index_max`
+      + `&timezone=auto&forecast_days=2`;
+
+    const [wRes, gRes] = await Promise.all([
+      fetch(url),
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`).catch(()=>null)
+    ]);
+    const d = await wRes.json();
+    const gd = gRes ? await gRes.json().catch(()=>({})) : {};
+    const city = gd.address?.city || gd.address?.town || gd.address?.village || 'Lyon';
+
+    const c  = d.current;
     const dd = d.daily;
+    const h  = d.hourly;
     const code = c.weathercode;
     const icon = WMO[code] || '🌡';
     const label = WMO_LABEL[code] || '';
     const tmax = Math.round(dd.temperature_2m_max[0]);
     const tmin = Math.round(dd.temperature_2m_min[0]);
-    // Reverse geocode city name
-    let city = 'Lyon';
-    try {
-      const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
-      const gd = await geo.json();
-      city = gd.address?.city || gd.address?.town || gd.address?.village || 'Lyon';
-    } catch {}
-    el.innerHTML = `<div class="weather-bar">
+    const rainDay = dd.precipitation_sum[0]?.toFixed(1) || '0';
+    const windMax = Math.round(dd.windspeed_10m_max[0] || 0);
+    const uv = dd.uv_index_max?.[0]?.toFixed(0) || '—';
+
+    // Header compact
+    elBar.innerHTML = `<div class="weather-bar">
       <div class="w-icon">${icon}</div>
       <div class="w-temp">${Math.round(c.temperature_2m)}°</div>
       <div class="w-right">
@@ -636,8 +701,56 @@ async function loadWeather() {
         <div class="w-range">↑${tmax}° ↓${tmin}° · 💨 ${Math.round(c.windspeed_10m)} km/h</div>
       </div>
     </div>`;
-  } catch {
-    el.innerHTML = `<div class="weather-bar"><span class="w-temp" style="font-size:12px;opacity:0.5">Météo indisponible</span></div>`;
+
+    // Hourly — today only (filter to current hour + next 18h max)
+    const nowHour = new Date().getHours();
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const hours = h.time
+      .map((t, i) => ({ t, i }))
+      .filter(({ t }) => t.startsWith(todayStr) && parseInt(t.slice(11, 13)) >= nowHour)
+      .slice(0, 18);
+
+    const hoursHtml = hours.map(({ t, i }) => {
+      const hr = parseInt(t.slice(11, 13));
+      const isNow = hr === nowHour;
+      const rain = h.precipitation_probability[i] || 0;
+      const prec = h.precipitation[i]?.toFixed(1) || '0';
+      const wind = Math.round(h.windspeed_10m[i] || 0);
+      const tmp  = Math.round(h.temperature_2m[i]);
+      const ico  = WMO[h.weathercode[i]] || '🌤';
+      return `<div class="hour-col ${isNow ? 'now' : ''}">
+        <div class="hour-time">${hr}h</div>
+        <div class="hour-icon">${ico}</div>
+        <div class="hour-temp">${tmp}°</div>
+        <div class="rain-bar-wrap"><div class="rain-bar-fill" style="width:${rain}%"></div></div>
+        <div class="hour-rain">${rain}%</div>
+        <div class="hour-wind">💨${wind}</div>
+      </div>`;
+    }).join('');
+
+    elCard.innerHTML = `
+      <div class="weather-card-top">
+        <div class="wc-icon">${icon}</div>
+        <div class="wc-temp">${Math.round(c.temperature_2m)}°C</div>
+        <div class="wc-details">
+          <div class="wc-cond">${label} · ${city}</div>
+          <div class="wc-meta">Ressenti ${Math.round(c.apparent_temperature)}° · Humidité ${c.relativehumidity_2m}%</div>
+        </div>
+      </div>
+      <div class="wc-agri">
+        <div class="agri-tile"><div class="agri-label">Temp. max</div><div class="agri-val">${tmax}°<span class="agri-unit">C</span></div></div>
+        <div class="agri-tile"><div class="agri-label">Pluie jour</div><div class="agri-val">${rainDay}<span class="agri-unit">mm</span></div></div>
+        <div class="agri-tile"><div class="agri-label">Vent max</div><div class="agri-val">${windMax}<span class="agri-unit">km/h</span></div></div>
+        <div class="agri-tile"><div class="agri-label">UV max</div><div class="agri-val">${uv}</div></div>
+      </div>
+      <div class="hourly-scroll">
+        <div class="hourly-row">${hoursHtml}</div>
+      </div>`;
+
+    document.getElementById('upd-weather-card').textContent = now();
+  } catch(e) {
+    if(elBar) elBar.innerHTML = `<div class="weather-bar"><span class="w-temp" style="font-size:12px;opacity:0.5">Météo indisponible</span></div>`;
+    if(elCard) elCard.innerHTML = `<div class="err">Météo indisponible</div>`;
   }
 }
 
